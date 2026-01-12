@@ -25,7 +25,7 @@ A comprehensive web application for generating AI-powered images using text-to-i
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/asharibhussain/aI-image-generation-platform.git
 cd ai_image
 ```
 
