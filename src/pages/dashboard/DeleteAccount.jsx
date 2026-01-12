@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { auth, db } from "@/firebase";
-import { deleteUser } from "firebase/auth";
+import { deleteUser, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
 import {
   collection,
   getDocs,
+  getDoc,
   query,
   where,
   deleteDoc,
+  doc,
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
@@ -26,6 +28,17 @@ export default function DeleteAccount() {
     setLoading(true);
 
     try {
+      // Re-authenticate the user before account deletion
+      const password = prompt('Please enter your password to confirm account deletion:', '');
+      if (!password) {
+        alert('Account deletion cancelled. Password is required for security.');
+        setLoading(false);
+        return;
+      }
+
+      const credential = EmailAuthProvider.credential(user.email, password);
+      await reauthenticateWithCredential(user, credential);
+
       // 1. Delete all user's images
       const imagesQuery = query(
         collection(db, "images"),
@@ -37,16 +50,26 @@ export default function DeleteAccount() {
       );
       await Promise.all(imageDeletions);
 
-      // 2. Delete user document from 'users' collection by uid field
-      const usersQuery = query(
-        collection(db, "users"),
-        where("uid", "==", user.uid)
-      );
-      const usersSnapshot = await getDocs(usersQuery);
-      const userDeletions = usersSnapshot.docs.map((doc) =>
-        deleteDoc(doc.ref)
-      );
-      await Promise.all(userDeletions);
+      // 2. Delete user document from 'users' collection
+      // Try multiple possible field names for user ID
+      const userDocRef = doc(db, "users", user.uid);
+      
+      // Check if document exists before attempting to delete
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists()) {
+        await deleteDoc(userDocRef);
+      } else {
+        // Fallback: try to find user document by uid field if direct reference doesn't work
+        const usersQuery = query(
+          collection(db, "users"),
+          where("uid", "==", user.uid)
+        );
+        const usersSnapshot = await getDocs(usersQuery);
+        const userDeletions = usersSnapshot.docs.map((doc) =>
+          deleteDoc(doc.ref)
+        );
+        await Promise.all(userDeletions);
+      }
 
       // 3. Delete Auth user
       await deleteUser(user);
@@ -55,11 +78,18 @@ export default function DeleteAccount() {
       navigate("/sign-up");
     } catch (error) {
       console.error("Error deleting account:", error);
-      alert("Failed to delete account: " + error.message);
+      if (error.code === 'auth/wrong-password') {
+        alert("Failed to delete account: Incorrect password. Please try again.");
+      } else if (error.code === 'auth/user-mismatch') {
+        alert("Failed to delete account: Authentication mismatch. Please sign out and sign in again.");
+      } else {
+        alert("Failed to delete account: " + error.message);
+      }
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="p-4">
