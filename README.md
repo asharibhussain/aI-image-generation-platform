@@ -1,6 +1,17 @@
 # AI Image Generation Platform
 
 A comprehensive web application for generating AI-powered images using text-to-image and image-to-image conversion technologies. The platform features user authentication, API key management, and a gallery for viewing generated images.
+Email: superadmin@gmaill.com  
+Password: password
+⚠️ Note: This account is for demo/testing only. Do not use it in production environments.
+
+Important Notes About API Keys & Usage
+The top-tier image generation models require paid API keys.
+
+If no paid key is configured, the platform will return limited or no response for those models.
+
+Make sure you add a valid and active API key from the API Configuration section in the admin dashboard to enable full functionality.
+
 
 ## Features
 
